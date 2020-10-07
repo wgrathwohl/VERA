@@ -14,23 +14,23 @@
 # limitations under the License.
 
 import utils
-import torch as t, torch.nn as nn
+import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
-import torchvision as tv, torchvision.transforms as tr
+import torchvision as tv
+import torchvision.transforms as tr
 import os
 import sys
 import argparse
 import numpy as np
 import models.wideresnet as wideresnet
 from models.get_models import get_models
-import pdb
 import pickle
 
-from tqdm import tqdm
 # Sampling
 from tqdm import tqdm
-t.backends.cudnn.benchmark = True
-t.backends.cudnn.enabled = True
+torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.enabled = True
 seed = 1
 im_sz = 32
 n_ch = 3
@@ -77,7 +77,7 @@ class CCF(F):
         if y is None:
             return logits.logsumexp(1)
         else:
-            return t.gather(logits, 1, y[:, None])
+            return torch.gather(logits, 1, y[:, None])
 
 
 def cycle(loader):
@@ -87,21 +87,21 @@ def cycle(loader):
 
 
 def init_random(bs):
-    return t.FloatTensor(bs, 3, 32, 32).uniform_(-1, 1)
+    return torch.FloatTensor(bs, 3, 32, 32).uniform_(-1, 1)
 
 
 def sample_p_0(device, replay_buffer, bs, y=None):
     if len(replay_buffer) == 0:
         return init_random(bs), []
     buffer_size = len(replay_buffer) if y is None else len(replay_buffer) // n_classes
-    inds = t.randint(0, buffer_size, (bs,))
+    inds = torch.randint(0, buffer_size, (bs,))
     # if cond, convert inds to class conditional inds
     if y is not None:
         inds = y.cpu() * buffer_size + inds
         assert not args.uncond, "Can't drawn conditional samples without giving me y"
     buffer_samples = replay_buffer[inds]
     random_samples = init_random(bs)
-    choose_random = (t.rand(bs) < args.reinit_freq).float()[:, None, None, None]
+    choose_random = (torch.rand(bs) < args.reinit_freq).float()[:, None, None, None]
     samples = choose_random * random_samples + (1 - choose_random) * buffer_samples
     return samples.to(device), inds
 
@@ -115,11 +115,11 @@ def sample_q(args, device, f, replay_buffer, y=None):
     bs = args.batch_size if y is None else y.size(0)
     # generate initial samples and buffer inds of those samples (if buffer is used)
     init_sample, buffer_inds = sample_p_0(device, replay_buffer, bs=bs, y=y)
-    x_k = t.autograd.Variable(init_sample, requires_grad=True)
+    x_k = torch.autograd.Variable(init_sample, requires_grad=True)
     # sgld
     for k in range(args.n_steps):
-        f_prime = t.autograd.grad(f(x_k, y=y).sum(), [x_k], retain_graph=True)[0]
-        x_k.data += args.sgld_lr * f_prime + args.sgld_std * t.randn_like(x_k)
+        f_prime = torch.autograd.grad(f(x_k, y=y).sum(), [x_k], retain_graph=True)[0]
+        x_k.data += args.sgld_lr * f_prime + args.sgld_std * torch.randn_like(x_k)
     f.train()
     final_samples = x_k.detach()
     # update replay buffer
@@ -127,8 +127,6 @@ def sample_q(args, device, f, replay_buffer, y=None):
         replay_buffer[buffer_inds] = final_samples.cpu()
     return final_samples
 
-
-import torch
 def refine_MALA(logp_net, g, x_g, sgld_lr_z):
     # latent space sgld
     eps_sgld = torch.randn_like(x_g)
@@ -212,8 +210,8 @@ def uncond_samples(f, g, args, device, save=True):
 
 def cond_samples(f, replay_buffer, args, device, fresh=False):
     _, _, plot = utils.get_data(args)
-    sqrt = lambda x: int(t.sqrt(t.Tensor([x])))
-    plot = lambda p, x: tv.utils.save_image(t.clamp(x, -1, 1), p, normalize=True, nrow=sqrt(x.size(0)))
+    sqrt = lambda x: int(torch.sqrt(torch.Tensor([x])))
+    plot = lambda p, x: tv.utils.save_image(torch.clamp(x, -1, 1), p, normalize=True, nrow=sqrt(x.size(0)))
 
     if fresh:
         replay_buffer = uncond_samples(f, args, device, save=False)
@@ -224,7 +222,7 @@ def cond_samples(f, replay_buffer, args, device, fresh=False):
         y = f.classify(x).max(1)[1]
         all_y.append(y)
 
-    all_y = t.cat(all_y, 0)
+    all_y = torch.cat(all_y, 0)
     each_class = [replay_buffer[all_y == l] for l in range(10)]
     print([len(c) for c in each_class])
     for i in range(100):
@@ -232,7 +230,7 @@ def cond_samples(f, replay_buffer, args, device, fresh=False):
         for l in range(10):
             this_l = each_class[l][i * 10: (i + 1) * 10]
             this_im.append(this_l)
-        this_im = t.cat(this_im, 0)
+        this_im = torch.cat(this_im, 0)
         if this_im.size(0) > 0:
             plot('{}/samples_{}.png'.format(args.save_dir, i), this_im)
         print(i)
@@ -244,16 +242,16 @@ def logp_hist(f, args, device):
     sns.set()
     plt.switch_backend('agg')
     def sample(x, n_steps=args.n_steps):
-        x_k = t.autograd.Variable(x.clone(), requires_grad=True)
+        x_k = torch.autograd.Variable(x.clone(), requires_grad=True)
         # sgld
         for k in range(n_steps):
-            f_prime = t.autograd.grad(f(x_k).sum(), [x_k], retain_graph=True)[0]
-            x_k.data += f_prime + 1e-2 * t.randn_like(x_k)
+            f_prime = torch.autograd.grad(f(x_k).sum(), [x_k], retain_graph=True)[0]
+            x_k.data += f_prime + 1e-2 * torch.randn_like(x_k)
         final_samples = x_k.detach()
         return final_samples
     def grad_norm(x):
-        x_k = t.autograd.Variable(x, requires_grad=True)
-        f_prime = t.autograd.grad(f(x_k).sum(), [x_k], retain_graph=True)[0]
+        x_k = torch.autograd.Variable(x, requires_grad=True)
+        f_prime = torch.autograd.grad(f(x_k).sum(), [x_k], retain_graph=True)[0]
         grad = f_prime.view(x.size(0), -1)
         return grad.norm(p=2, dim=1)
     def score_fn(x):
@@ -262,7 +260,7 @@ def logp_hist(f, args, device):
         elif args.score_fn == "py":
             return nn.Softmax()(f.classify(x)).max(1)[0].detach().cpu()
         elif args.score_fn == "pxgrad":
-            return -t.log(grad_norm(x).detach().cpu())
+            return -torch.log(grad_norm(x).detach().cpu())
         elif args.score_fn == "refine":
             init_score = f(x)
             x_r = sample(x)
@@ -284,7 +282,7 @@ def logp_hist(f, args, device):
     transform_test = tr.Compose(
         [tr.ToTensor(),
          tr.Normalize((.5, .5, .5), (.5, .5, .5)),
-         lambda x: x + args.sigma * t.randn_like(x)]
+         lambda x: x + args.sigma * torch.randn_like(x)]
     )
     datasets = {
         "cifar10": tv.datasets.CIFAR10(root="../data", transform=transform_test, download=True, train=False),
@@ -299,7 +297,7 @@ def logp_hist(f, args, device):
                                         transform=tr.Compose([tr.Resize(32),
                                                    tr.ToTensor(),
                                                    tr.Normalize((.5, .5, .5), (.5, .5, .5)),
-                                                   lambda x: x + args.sigma * t.randn_like(x)]), download=False)
+                                                   lambda x: x + args.sigma * torch.randn_like(x)]), download=False)
     }
 
     score_dict = {}
@@ -325,15 +323,15 @@ def OODAUC(f, args, device):
     print("OOD Evaluation")
 
     def grad_norm(x):
-        x_k = t.autograd.Variable(x, requires_grad=True)
-        f_prime = t.autograd.grad(f(x_k).sum(), [x_k], retain_graph=True)[0]
+        x_k = torch.autograd.Variable(x, requires_grad=True)
+        f_prime = torch.autograd.grad(f(x_k).sum(), [x_k], retain_graph=True)[0]
         grad = f_prime.view(x.size(0), -1)
         return grad.norm(p=2, dim=1)
 
     transform_test = tr.Compose(
         [tr.ToTensor(),
          tr.Normalize((.5, .5, .5), (.5, .5, .5)),
-         lambda x: x + args.sigma * t.randn_like(x)]
+         lambda x: x + args.sigma * torch.randn_like(x)]
     )
 
     dset_real = tv.datasets.CIFAR10(root="../data", transform=transform_test, download=True, train=False)
@@ -353,7 +351,7 @@ def OODAUC(f, args, device):
                                         transform=tr.Compose([tr.Resize(32),
                                                    tr.ToTensor(),
                                                    tr.Normalize((.5, .5, .5), (.5, .5, .5)),
-                                                   lambda x: x + args.sigma * t.randn_like(x)]), download=False)
+                                                   lambda x: x + args.sigma * torch.randn_like(x)]), download=False)
     else:
         dset_fake = tv.datasets.CIFAR10(root="../data", transform=transform_test, download=True, train=False)
 
@@ -382,7 +380,7 @@ def OODAUC(f, args, device):
         for i, (x, _) in enumerate(dload_fake):
             x = x.to(device)
             if i > 0:
-                x_mix = (x + last_batch) / 2 + args.sigma * t.randn_like(x)
+                x_mix = (x + last_batch) / 2 + args.sigma * torch.randn_like(x)
                 scores = score_fn(x_mix)
                 fake_scores.append(scores.numpy())
                 print(scores.mean())
@@ -390,14 +388,14 @@ def OODAUC(f, args, device):
     elif args.ood_dataset == "uniform":
         for i, (x, _) in enumerate(dload_real):
             x = x.to(device)
-            x = t.rand_like(x) * 2. - 1.
+            x = torch.rand_like(x) * 2. - 1.
             scores = score_fn(x)
             fake_scores.append(scores.numpy())
             print(scores.mean())
     elif args.ood_dataset == "constant":
         for i, (x, _) in enumerate(dload_real):
             x = x.to(device)
-            x = t.zeros_like(x) * 2. - 1.
+            x = torch.zeros_like(x) * 2. - 1.
             scores = score_fn(x)
             fake_scores.append(scores.numpy())
             print(scores.mean())
@@ -426,11 +424,11 @@ def test_clf(f, args, device):
     # )
 
     def sample(x, n_steps=args.n_steps):
-        x_k = t.autograd.Variable(x.clone(), requires_grad=True)
+        x_k = torch.autograd.Variable(x.clone(), requires_grad=True)
         # sgld
         for k in range(n_steps):
-            f_prime = t.autograd.grad(f(x_k).sum(), [x_k], retain_graph=True)[0]
-            x_k.data += f_prime + 1e-2 * t.randn_like(x_k)
+            f_prime = torch.autograd.grad(f(x_k).sum(), [x_k], retain_graph=True)[0]
+            x_k.data += f_prime + 1e-2 * torch.randn_like(x_k)
         final_samples = x_k.detach()
         return final_samples
 
@@ -469,7 +467,7 @@ def test_clf(f, args, device):
 
     loss = np.mean(losses)
     correct = np.mean(corrects)
-    t.save({"losses": losses, "corrects": corrects, "pys": pys}, os.path.join(args.save_dir, "vals.pt"))
+    torch.save({"losses": losses, "corrects": corrects, "pys": pys}, os.path.join(args.save_dir, "vals.pt"))
     print(loss, correct)
 
 
@@ -478,18 +476,18 @@ def main(args):
     if args.print_to_log:
         sys.stdout = open(f'{args.save_dir}/log.txt', 'w')
 
-    t.manual_seed(seed)
-    if t.cuda.is_available():
-        t.cuda.manual_seed_all(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
-    device = t.device('cuda' if t.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     f, g = get_models(args)
 
     print(f"loading model from {args.ckpt_path}")
 
     # load em up
-    ckpt = t.load(args.ckpt_path)
+    ckpt = torch.load(args.ckpt_path)
     f.load_state_dict(ckpt["model"]["logp_net"])
     g.load_state_dict(ckpt["model"]["g"])
 
