@@ -473,8 +473,6 @@ def test_clf(f, args, device):
 
 def main(args):
     utils.makedirs(args.save_dir)
-    if args.print_to_log:
-        sys.stdout = open(f'{args.save_dir}/log.txt', 'w')
 
     torch.manual_seed(seed)
     if torch.cuda.is_available():
@@ -496,23 +494,18 @@ def main(args):
     f.eval()
     if args.eval == "OOD":
         OODAUC(f, args, device)
-
-    if args.eval == "test_clf":
+    elif args.eval == "test_clf":
         test_clf(f, args, device)
-
-    if args.eval == "cond_samples":
+    elif args.eval == "cond_samples":
         cond_samples(f, g, args, device, args.fresh_samples)
-
-    if args.eval == "uncond_samples":
+    elif args.eval == "uncond_samples":
         uncond_samples(f, g, args, device)
-
-    if args.eval == "logp_hist":
+    elif args.eval == "logp_hist":
         logp_hist(f, args, device)
 
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Energy Based Models and Shit")
+    parser = argparse.ArgumentParser("Evaluating Samples from EBM")
     parser.add_argument("--eval", default="OOD", type=str,
                         choices=["uncond_samples", "cond_samples", "logp_hist", "OOD", "test_clf"])
     parser.add_argument("--score_fn", default="px", type=str,
@@ -550,7 +543,6 @@ if __name__ == "__main__":
     parser.add_argument("--n_sample_steps", type=int, default=100)
     parser.add_argument("--n_sample_batches", type=int, default=100)
     parser.add_argument("--load_path", type=str, default=None)
-    parser.add_argument("--print_to_log", action="store_true")
     parser.add_argument("--fresh_samples", action="store_true",
                         help="If set, then we generate a new replay buffer from scratch for conditional sampling,"
                              "Will be much slower.")
