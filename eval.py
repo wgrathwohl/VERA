@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader, Dataset
 import torchvision as tv
 import torchvision.transforms as tr
 import os
-import sys
+import sklearn.metrics
 import argparse
 import numpy as np
 import models.wideresnet as wideresnet
@@ -342,16 +342,12 @@ def OODAUC(f, args, device):
     elif args.ood_dataset == "cifar_100":
         dset_fake = tv.datasets.CIFAR100(root="../data", transform=transform_test, download=True, train=False)
     elif args.ood_dataset == "celeba":
-        # dset_fake = tv.datasets.ImageFolder(root="/scratch/gobi2/gwohl/celeba/splits",
-        #                                     transform=tr.Compose([tr.Resize(32),
-        #                                                           tr.ToTensor(),
-        #                                                           tr.Normalize((.5, .5, .5), (.5, .5, .5)),
-        #                                                           lambda x: x + args.sigma * t.randn_like(x)]))
         dset_fake = tv.datasets.CelebA(root="./data", split="test",
-                                        transform=tr.Compose([tr.Resize(32),
-                                                   tr.ToTensor(),
-                                                   tr.Normalize((.5, .5, .5), (.5, .5, .5)),
-                                                   lambda x: x + args.sigma * torch.randn_like(x)]), download=False)
+                                       transform=tr.Compose([tr.Resize(32),
+                                                             tr.ToTensor(),
+                                                             tr.Normalize((.5, .5, .5), (.5, .5, .5)),
+                                                             lambda x: x + args.sigma * torch.randn_like(x)]),
+                                       download=False)
     else:
         dset_fake = tv.datasets.CIFAR10(root="../data", transform=transform_test, download=True, train=False)
 
@@ -409,7 +405,6 @@ def OODAUC(f, args, device):
     fake_scores = np.concatenate(fake_scores)
     real_labels = np.ones_like(real_scores)
     fake_labels = np.zeros_like(fake_scores)
-    import sklearn.metrics
     scores = np.concatenate([real_scores, fake_scores])
     labels = np.concatenate([real_labels, fake_labels])
     score = sklearn.metrics.roc_auc_score(labels, scores)
@@ -492,6 +487,7 @@ def main(args):
     f = f.to(device)
     g = g.to(device)
     f.eval()
+
     if args.eval == "OOD":
         OODAUC(f, args, device)
     elif args.eval == "test_clf":
@@ -558,7 +554,9 @@ if __name__ == "__main__":
     parser.add_argument("--logit", action="store_true")
 
     args = parser.parse_args()
+
     args.clf = True
+
     if args.depth == 28 and args.width == 10:
         args.thicc_resnet = True
         args.wide_resnet = False
@@ -569,8 +567,9 @@ if __name__ == "__main__":
         args.resnet = False
     else:
         args.wide_resnet = False
-        args.wide_resnet = False
+        args.thicc_resnet = False
         args.resnet = True
+
     if args.dataset == "cifar10":
         args.dropout = .3
     else:
