@@ -18,7 +18,7 @@ Many thanks to my amazing co-authors: [Jacob Kelly](https://jacobjinkelly.github
 
 ## Requirements
 
-```
+```markdown
 pytorch==1.5.1
 torchvision==0.6.1
 numpy
@@ -33,14 +33,43 @@ tqdm
 ### Hyperparameters
 
 A brief explanation of hyperparameters that can be set from flags and their names in the paper. 
-- `clf_weight` Classification weight (`\alpha` in the paper)
-- `pg_control` Gradient norm penalty (`\gamma` in the paper)
-- `ent_weight` Entropy regularization weight (`\lambda` in the paper)
-- `clf_ent_weight` Classification entropy (`\beta` in the paper)
+- `--clf_weight` Classification weight (`\alpha` in the paper)
+- `--pg_control` Gradient norm penalty (`\gamma` in the paper)
+- `--ent_weight` Entropy regularization weight (`\lambda` in the paper)
+- `--clf_ent_weight` Classification entropy (`\beta` in the paper)
 
 ### Training
 
+An explanation of flags for different modes of training
+
+- `--clf_only` For training a classifier on its own, i.e. without an EBM as in JEM.
+- `--jem` Do JEM training.
+- `--labels_per_class` If this is greater than zero, use this many labels per class for semi-supervised learning. If zero (default), do full-label training.
+
+For example, to train a CIFAR10 JEM model: # TODO
+
 ### Evaluation
+
+To evaluate the classifier (on CIFAR10):
+```markdown
+python eval.py --ckpt_path /PATH/TO/YOUR/MODEL.pt --eval test_clf --dataset cifar_test
+```
+To do OOD detection (on CIFAR100)
+```markdown
+python eval.py --ckpt_path /PATH/TO/YOUR/MODEL.pt --eval OOD --ood_dataset cifar_100
+```
+To generate a histogram of OOD scores.
+```markdown
+python eval.py --ckpt_path /PATH/TO/YOUR/MODEL.pt --eval logp_hist --datasets cifar10 svhn --save_dir /YOUR/HIST/FOLDER
+```
+To generate unconditional samples
+```markdown
+python eval.py --ckpt_path /PATH/TO/YOUR/MODEL.pt --eval uncond_samples --save_dir /YOUR/SAVE/DIR --n_sample_steps 100 --n_steps 40
+```
+To generate conditional samples
+```markdown
+python eval.py --ckpt_path /PATH/TO/YOUR/MODEL.pt --eval cond_samples --save_dir /YOUR/SAVE/DIR --n_sample_steps 100 --n_steps 40
+```
 
 ### Mode counting
 
@@ -71,7 +100,7 @@ Download `data.zip` from [here](https://archive.ics.uci.edu/ml/datasets/Crop+map
 ### Summary of necessary files
 If you want to use all three datasets, the `datasets/` folder should include these files:
 
-```
+```markdown
 datasets/
 |-- HEPMASS
 |   |-- 1000_train.csv
