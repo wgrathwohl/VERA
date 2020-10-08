@@ -36,6 +36,14 @@ tqdm
 
 ### Mode counting
 
+Models can be trained by passing in the `--dataset stackmnist` flag. 
+
+Code for counting captured modes of a saved model is available in `mode_counting/stackmnist_mode.py`. 
+
+Code for training the MNIST classifier for counting modes is available in `mode_counting/mnist_classify.py`. 
+
+Hyperparameters may be found in the paper. In particular note that results were reported on MNIST rescaled to 64x64, which can be specified with `--img_size 64`.
+
 ## Data
 
 Tabular data for semi-supervised classification must be downloaded manually and placed in `datasets/`.
@@ -51,5 +59,30 @@ Download `UCI HAR Dataset.zip` from [here](https://archive.ics.uci.edu/ml/datase
 ### CROP
 
 Download `data.zip` from [here](https://archive.ics.uci.edu/ml/datasets/Crop+mapping+using+fused+optical-radar+data+set). Unzip. Place the resulting file in `datasets/CROP/`.
+
+### Summary of necessary files
+If you want to use all three datasets, the `datasets/` folder should include these files:
+
+```
+datasets/
+|-- HEPMASS
+|   |-- 1000_train.csv
+|   |-- 1000_test.csv
+|-- HUMAN
+|   |-- train
+|       |-- X_train.txt
+|       |-- y_train.txt
+|   |-- test
+|       |-- X_test.txt
+|       |-- y_test.txt
+|-- CROP
+|   |-- WinnipegDataset.txt
+```
+
+## Acknowledgements
+Some code from this repository was adapted from the following repositories:
+- [JEM](https://github.com/wgrathwohl/JEM)
+- [WideResnet](https://github.com/meliketoy/wide-resnet.pytorch)
+- [VAT](https://github.com/lyakaap/VAT-pytorch)
 
 ## BibTeX
