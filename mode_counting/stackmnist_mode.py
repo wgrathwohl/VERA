@@ -50,7 +50,7 @@ def main(parse_args):
     # paths to the models we'd like to evaluate
     eval_dirs = []
 
-    eval_itrs = [10000] * 10
+    eval_itrs = []
 
     def load_model(directory, itr,  return_p=False):
         """
