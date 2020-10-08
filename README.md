@@ -71,4 +71,10 @@ datasets/
 |   |-- WinnipegDataset.txt
 ```
 
+## Acknowledgements
+Some code from this repository was adapted from the following repositories:
+- [JEM](https://github.com/wgrathwohl/JEM)
+- [WideResnet](https://github.com/meliketoy/wide-resnet.pytorch)
+- [VAT](https://github.com/lyakaap/VAT-pytorch)
+
 ## BibTeX
