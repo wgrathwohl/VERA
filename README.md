@@ -38,4 +38,18 @@ tqdm
 
 ## Data
 
+Tabular data for semi-supervised classification must be downloaded manually and placed in `datasets/`.
+
+### HEPMASS
+
+Download `1000_train.csv.gz` and `1000_test.csv.gz` from [here](http://archive.ics.uci.edu/ml/datasets/HEPMASS). Unzip each of these files and place in `datasets/HEPMASS/`.
+
+### HUMAN
+
+Download `UCI HAR Dataset.zip` from [here](https://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones). Unzip. Rename the resulting folder to `HUMAN/` and place this folder in `datasets/`.
+
+### CROP
+
+Download `data.zip` from [here](https://archive.ics.uci.edu/ml/datasets/Crop+mapping+using+fused+optical-radar+data+set). Unzip. Place the resulting file in `datasets/CROP/`.
+
 ## BibTeX
