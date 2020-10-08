@@ -9,3 +9,14 @@ Code for the paper:
 <p align="center">
 <img align="middle" src="./assets/fig1.png" width="500" />
 </p>
+
+## Requirements
+
+```
+pytorch
+torchvision
+scikit-learn
+matplotlib
+seaborn
+tqdm
+```
