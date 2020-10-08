@@ -427,22 +427,14 @@ def test_clf(f, args, device):
         final_samples = x_k.detach()
         return final_samples
 
-    # if args.test_dataset == "cifar_train":
-    #     dset = tv.datasets.CIFAR10(root="../data", transform=transform_test, download=True, train=True)
-    # elif args.test_dataset == "cifar_test":
-    #     dset = tv.datasets.CIFAR10(root="../data", transform=transform_test, download=True, train=False)
-    # elif args.test_dataset == "svhn_train":
-    #     dset = tv.datasets.SVHN(root="../data", transform=transform_test, download=True, split="train")
-    # else:  # args.dataset == "svhn_test":
-    #     dset = tv.datasets.SVHN(root="../data", transform=transform_test, download=True, split="test")
-    #
-    # dload = DataLoader(dset, batch_size=100, shuffle=False, num_workers=4, drop_last=False)
     if args.test_dataset == "cifar_train":
         args.dataset = "cifar10"
         dload, _, _ = utils.get_data(args)
     elif args.test_dataset == "cifar_test":
         args.dataset = "cifar10"
         _, dload, _ = utils.get_data(args)
+    else:
+        raise ValueError
 
     f.eval()
     corrects, losses, pys, preds = [], [], [], []
@@ -451,7 +443,6 @@ def test_clf(f, args, device):
         if args.n_steps > 0:
             x_p_d = sample(x_p_d)
         _, logits = f(x_p_d, return_logits=True)
-        #logits = f.classify(x_p_d)
         py = nn.Softmax()(f.classify(x_p_d)).max(1)[0].detach().cpu().numpy()
         loss = nn.CrossEntropyLoss(reduce=False)(logits, y_p_d).cpu().detach().numpy()
         losses.extend(loss)
