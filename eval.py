@@ -13,22 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import utils
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
-import torchvision as tv
-import torchvision.transforms as tr
-import os
-import sklearn.metrics
 import argparse
-import numpy as np
-import models.wideresnet as wideresnet
-from models.get_models import get_models
+import os
 import pickle
 
-# Sampling
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+import sklearn.metrics
+import torch
+import torch.nn as nn
+import torchvision as tv
+import torchvision.transforms as tr
+from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
+
+import models.wideresnet as wideresnet
+import utils
+from models.get_models import get_models
+
+# Sampling
 torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.enabled = True
 seed = 1
@@ -159,13 +163,10 @@ def refine_MALA(logp_net, g, x_g, sgld_lr_z):
 
 def uncond_samples(f, g, args, device, save=True):
     _, _, plot = utils.get_data(args)
-    #sqrt = lambda x: int(t.sqrt(t.Tensor([x])))
-    #plot = lambda p, x: tv.utils.save_image(t.clamp(x, -1, 1), p, normalize=True, nrow=sqrt(x.size(0)))
     sgld_lr = args.sgld_lr
     cond_samples_init = [[] for _ in range(args.n_classes)]
     cond_samples_ref = [[] for _ in range(args.n_classes)]
     for i in range(args.n_sample_batches):
-        #samples = sample_q(args, device, f, replay_buffer)
         x_g, h_g = g.sample(args.batch_size, requires_grad=True)
         x_init, x_ref, sgld_lr = refine_MALA(f, g, x_g, sgld_lr)
         x_init = x_init.detach()
@@ -207,14 +208,11 @@ def uncond_samples(f, g, args, device, save=True):
         pickle.dump(ref_classes, f)
 
 
-
-def cond_samples(f, replay_buffer, args, device, fresh=False):
+def cond_samples(f, replay_buffer, args, device):
     _, _, plot = utils.get_data(args)
     sqrt = lambda x: int(torch.sqrt(torch.Tensor([x])))
     plot = lambda p, x: tv.utils.save_image(torch.clamp(x, -1, 1), p, normalize=True, nrow=sqrt(x.size(0)))
 
-    if fresh:
-        replay_buffer = uncond_samples(f, args, device, save=False)
     n_it = replay_buffer.size(0) // 100
     all_y = []
     for i in range(n_it):
@@ -237,10 +235,9 @@ def cond_samples(f, replay_buffer, args, device, fresh=False):
 
 
 def logp_hist(f, args, device):
-    import matplotlib.pyplot as plt
-    import seaborn as sns
     sns.set()
     plt.switch_backend('agg')
+
     def sample(x, n_steps=args.n_steps):
         x_k = torch.autograd.Variable(x.clone(), requires_grad=True)
         # sgld
@@ -249,11 +246,13 @@ def logp_hist(f, args, device):
             x_k.data += f_prime + 1e-2 * torch.randn_like(x_k)
         final_samples = x_k.detach()
         return final_samples
+
     def grad_norm(x):
         x_k = torch.autograd.Variable(x, requires_grad=True)
         f_prime = torch.autograd.grad(f(x_k).sum(), [x_k], retain_graph=True)[0]
         grad = f_prime.view(x.size(0), -1)
         return grad.norm(p=2, dim=1)
+
     def score_fn(x):
         if args.score_fn == "px":
             return f(x).detach().cpu()
@@ -287,17 +286,14 @@ def logp_hist(f, args, device):
     datasets = {
         "cifar10": tv.datasets.CIFAR10(root="../data", transform=transform_test, download=True, train=False),
         "svhn": tv.datasets.SVHN(root="../data", transform=transform_test, download=True, split="test"),
-        "cifar100":tv.datasets.CIFAR100(root="../data", transform=transform_test, download=True, train=False),
-        # "celeba": tv.datasets.ImageFolder(root="/scratch/gobi2/gwohl/celeba/splits",
-        #                                   transform=tr.Compose([tr.Resize(32),
-        #                                                         tr.ToTensor(),
-        #                                                         tr.Normalize((.5, .5, .5), (.5, .5, .5)),
-        #                                                         lambda x: x + args.sigma * t.randn_like(x)]))
-         "celeba": tv.datasets.CelebA(root="./data", split="test",
-                                        transform=tr.Compose([tr.Resize(32),
-                                                   tr.ToTensor(),
-                                                   tr.Normalize((.5, .5, .5), (.5, .5, .5)),
-                                                   lambda x: x + args.sigma * torch.randn_like(x)]), download=False)
+        "cifar100": tv.datasets.CIFAR100(root="../data", transform=transform_test, download=True, train=False),
+        "celeba": tv.datasets.CelebA(root="./data",
+                                     split="test",
+                                     transform=tr.Compose([tr.Resize(32),
+                                                           tr.ToTensor(),
+                                                           tr.Normalize((.5, .5, .5), (.5, .5, .5)),
+                                                           lambda x: x + args.sigma * torch.randn_like(x)]),
+                                     download=False)
     }
 
     score_dict = {}
@@ -412,11 +408,6 @@ def OODAUC(f, args, device):
 
 
 def test_clf(f, args, device):
-    # transform_test = tr.Compose(
-    #     [tr.ToTensor(),
-    #      tr.Normalize((.5, .5, .5), (.5, .5, .5)),
-    #      lambda x: x + t.randn_like(x) * args.sigma]
-    # )
 
     def sample(x, n_steps=args.n_steps):
         x_k = torch.autograd.Variable(x.clone(), requires_grad=True)
@@ -484,7 +475,7 @@ def main(args):
     elif args.eval == "test_clf":
         test_clf(f, args, device)
     elif args.eval == "cond_samples":
-        cond_samples(f, g, args, device, args.fresh_samples)
+        cond_samples(f, g, args, device)
     elif args.eval == "uncond_samples":
         uncond_samples(f, g, args, device)
     elif args.eval == "logp_hist":
@@ -501,7 +492,6 @@ if __name__ == "__main__":
                         choices=["svhn", "cifar_interp", "cifar_100", "celeba", "uniform", "constant"],
                         help="Chooses which dataset to compare against for OOD")
     parser.add_argument("--dataset", default="cifar_test", type=str,
-                        #choices=["cifar_train", "cifar_test", "svhn_test", "svhn_train"],
                         help="Dataset to use when running test_clf for classification accuracy")
     parser.add_argument("--test_dataset", default="cifar_test", type=str,
                         choices=["cifar_train", "cifar_test", "svhn_test", "svhn_train"],
@@ -530,9 +520,6 @@ if __name__ == "__main__":
     parser.add_argument("--n_sample_steps", type=int, default=100)
     parser.add_argument("--n_sample_batches", type=int, default=100)
     parser.add_argument("--load_path", type=str, default=None)
-    parser.add_argument("--fresh_samples", action="store_true",
-                        help="If set, then we generate a new replay buffer from scratch for conditional sampling,"
-                             "Will be much slower.")
     parser.add_argument("--generator_type", type=str, default="vlvm", choices=["lvm", "vlvm"])
     parser.add_argument("--noise_dim", type=int, default=128)
     parser.add_argument("--unit_interval", action="store_true")
