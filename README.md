@@ -10,7 +10,7 @@ Code for the paper:
 <img align="middle" src="./assets/fig1.png" width="500" />
 </p>
 
-Code for implementing **V**ariational **E**ntropy **R**egularized **A**pproximate maximum likelihood (VERA). Contains scripts for training VERA and using VERA for [JEM](https://github.com/wgrathwohl/JEM) training. Code is also available for training semi-supervised models on tabular data, mode counting experiments, and tractable likelihood models.
+Code for implementing **V**ariational **E**ntropy **R**egularized **A**pproximate maximum likelihood (VERA). Contains scripts for training VERA and using VERA for [JEM](https://github.com/wgrathwohl/JEM) training. Code is also available for training semi-supervised models on tabular data, mode counting experiments, and tractable likelihood models experiments.
 
 For more info on me and my work please checkout my [website](http://www.cs.toronto.edu/~wgrathwohl/), [twitter](https://twitter.com/wgrathwohl), or [Google Scholar](https://scholar.google.ca/citations?user=ZbClz98AAAAJ&hl=en). 
 
@@ -33,20 +33,29 @@ tqdm
 ### Hyperparameters
 
 A brief explanation of hyperparameters that can be set from flags and their names in the paper. 
-- `--clf_weight` Classification weight (`\alpha` in the paper)
-- `--pg_control` Gradient norm penalty (`\gamma` in the paper)
-- `--ent_weight` Entropy regularization weight (`\lambda` in the paper)
-- `--clf_ent_weight` Classification entropy (`\beta` in the paper)
+- `--clf_weight` Classification weight (`\alpha`)
+- `--pg_control` Gradient norm penalty (`\gamma`)
+- `--ent_weight` Entropy regularization weight (`\lambda`)
+- `--clf_ent_weight` Classification entropy (`\beta`)
 
 ### Training
 
-An explanation of flags for different modes of training
+An explanation of flags for different modes of training. Without any of these flags, an unsupervised VERA model will be trained.
 
 - `--clf_only` For training a classifier on its own, i.e. without an EBM as in JEM.
 - `--jem` Do JEM training.
 - `--labels_per_class` If this is greater than zero, use this many labels per class for semi-supervised learning. If zero (default), do full-label training.
 
-For example, to train a CIFAR10 JEM model: # TODO
+To train a CIFAR10/CIFAR100 JEM model as in the paper, run:
+
+```markdown
+python train.py --dataset DATASET  # cifar10 or cifar100
+                --ent_weight 0.0001  --noise_dim 128  \
+                --viz_every 1000 --save_dir /YOUR/SAVE/DIR --data_aug --dropout .3 --thicc_resnet \
+                --ckpt_path /PATH/TO/YOUR/MODEL.pt --generator_type vera --n_epochs 200 --print_every 100 \
+                --lr .00003 --glr .00006 --post_lr .00003 --batch_size 40 --pg_control .1 \
+                --decay_epochs 150 175 --jem  --warmup_iters 2500 --clf_weight 100. --g_feats 256
+```
 
 ### Evaluation
 
