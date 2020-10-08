@@ -28,8 +28,8 @@ def get_models(args, log=True):
     elif args.dataset in TAB_DSETS:
         nout = args.num_classes if args.clf else 1
         logp_net = large_mlp_ebm(args.data_dim, nout=nout, weight_norm=False)
-    elif args.dataset in ["mnist", "stackmnist", "stack4mnist"]:
-        nout = 10 if args.clf else 1  # TODO: clf for {stack, stack4} mnist doesn't work
+    elif args.dataset in ["mnist", "stackmnist"]:
+        nout = 10 if args.clf else 1  # note: clf for stackmnist doesn't work
         if args.img_size is not None:
             if args.dataset == "mnist":
                 logp_net = DCGANDiscriminator(in_channels=1,
@@ -37,10 +37,6 @@ def get_models(args, log=True):
                                               nout=nout)
             elif args.dataset == "stackmnist":
                 logp_net = DCGANDiscriminator(img_size=args.img_size,
-                                              nout=nout)
-            elif args.dataset == "stack4mnist":
-                logp_net = DCGANDiscriminator(in_channels=4,
-                                              img_size=args.img_size,
                                               nout=nout)
             else:
                 raise ValueError
@@ -86,7 +82,7 @@ def get_models(args, log=True):
             generator_net = small_mlp_generator(args.noise_dim, args.data_dim, args.h_dim)
         elif args.dataset in TAB_DSETS:
             generator_net = large_mlp_generator(args.noise_dim, args.data_dim, no_final_act=True)
-        elif args.dataset in ["mnist", "stackmnist", "stack4mnist"]:
+        elif args.dataset in ["mnist", "stackmnist"]:
             if args.img_size is not None:
                 if args.dataset == "mnist":
                     generator_net = DCGANGenerator(noise_dim=args.noise_dim,
@@ -97,12 +93,6 @@ def get_models(args, log=True):
                     generator_net = DCGANGenerator(noise_dim=args.noise_dim,
                                                    unit_interval=args.unit_interval,
                                                    out_channels=3,
-                                                   img_size=args.img_size)
-                elif args.dataset == "stack4mnist":
-                    assert args.noise_dim == 128
-                    generator_net = DCGANGenerator(noise_dim=args.noise_dim,
-                                                   unit_interval=args.unit_interval,
-                                                   out_channels=4,
                                                    img_size=args.img_size)
                 else:
                     raise ValueError

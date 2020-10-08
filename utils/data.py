@@ -127,63 +127,6 @@ def get_data(args):
 
         return tr_dload, None, plot
 
-    elif args.dataset == "stack4mnist":
-        if args.img_size is not None:
-            pre_trans = [transforms.Resize(args.img_size), transforms.ToTensor()]
-        else:
-            pre_trans = [transforms.ToTensor()]
-            post_trans += [lambda x: x.view(-1)]
-        tr_dataset = datasets.MNIST("./data",
-                                    transform=transforms.Compose(pre_trans +
-                                                                 post_trans),
-                                    download=True)
-
-        def dataset_to_tensor(dataset):
-            """
-            Convert dataset to tensor (in particular apply resizing transformations).
-            """
-            loader = DataLoader(dataset, batch_size=len(dataset))
-            return next(iter(loader))
-
-        def stack_mnist(dataset):
-            """
-            Stack 4 MNIST images along 4 channels.
-            """
-            x, y = dataset_to_tensor(dataset)
-            n_data = 100 * 10 ** 3
-            np.random.seed(args.seed)  # seed so we always train on the same stackmnist
-            ids = np.random.randint(0, x.shape[0], size=(n_data, 4))
-            X_training = torch.zeros(n_data, 4, x.shape[2], x.shape[3])
-            Y_training = torch.zeros(n_data)
-            for i in range(ids.shape[0]):
-                cnt = 0
-                for j in range(ids.shape[1]):
-                    xij = x[ids[i, j]]
-                    X_training[i, j] = xij
-                    cnt += y[ids[i, j]] * (10**j)
-                Y_training[i] = cnt
-                if i % 10000 == 0:
-                    print('i: {}/{}'.format(i, ids.shape[0]))
-
-            return TensorDataset(X_training, Y_training)
-
-        tr_dataset = stack_mnist(tr_dataset)
-
-        _, tr_labels = tr_dataset.tensors
-        tr_label_counts = torch.Tensor(np.bincount(tr_labels, minlength=10000))
-
-        tr_dload = DataLoader(tr_dataset, args.batch_size, True, drop_last=True)
-
-        def plot(p, x):
-            """
-            Unstack images for plotting.
-            """
-            x = torch.cat((x[:, 0], x[:, 1], x[:, 2], x[:, 3]), dim=0)[:, None]
-            sqrt = lambda x: int(torch.sqrt(torch.Tensor([x])))
-            return torchvision.utils.save_image(post_trans_inv(x), p, normalize=False, nrow=sqrt(x.size(0)))
-
-        return tr_dload, None, plot, tr_label_counts
-
     elif args.dataset == "svhn":
         if args.data_aug:
             augs = [transforms.Pad(4, padding_mode="reflect"), transforms.RandomCrop(32)]

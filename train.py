@@ -24,7 +24,6 @@ from models.get_models import get_models
 from models.jem import get_buffer, sample_q
 from utils.toy_data import TOY_DSETS
 from tabular import TAB_DSETS
-from mode_counting import stack4mnist_mode
 
 torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.enabled = True
@@ -55,10 +54,7 @@ def main(args):
     logp_net.to(device)
 
     # data
-    if args.dataset == "stack4mnist":
-        train_loader, test_loader, plot, label_counts = utils.get_data(args)
-    else:
-        train_loader, test_loader, plot = utils.get_data(args)
+    train_loader, test_loader, plot = utils.get_data(args)
 
     batches_per_epoch = len(train_loader)
     niters = batches_per_epoch * args.n_epochs
@@ -843,54 +839,6 @@ def main(args):
                     plt.savefig("{}/cal.png".format(args.save_dir))
 
                 logp_net.train()
-            elif args.dataset == "stack4mnist" and itr % args.eval_every == 0:
-                eval_itrs.append(itr)
-
-                if args.jem_baseline:
-                    # curry all arguments except for batch_size
-                    sampler = lambda batch_size: sample_q(logp_net, replay_buffer,
-                               batch_size, args.n_steps, args.sgld_lr, args.sgld_std, args.reinit_freq, device)
-                    data_num_modes, model_num_modes, klqp = stack4mnist_mode.evaluate_original_jem_model(sampler,
-                                                                                            label_counts,
-                                                                                            args,
-                                                                                            device,
-                                                                                            num_samples=100000,
-                                                                                            batch_size=4000)
-                else:
-                    data_num_modes, model_num_modes, klqp = stack4mnist_mode.evaluate_model(g,
-                                                                                            label_counts,
-                                                                                            args,
-                                                                                            device,
-                                                                                            num_samples=100000,
-                                                                                            batch_size=5000)
-
-                modes.append(model_num_modes)
-                kl.append(klqp)
-
-                modes_argmax = max(enumerate(modes), key=itemgetter(1))[0]
-                kl_argmin = min(enumerate(kl), key=itemgetter(1))[0]
-
-                utils.print_log("eval itr {:06} | "
-                                "data modes {:05} model modes {:05} kl {:.3e} | "
-                                "best modes {:05} (kl {:.3e}) (itr {:06}) | "
-                                "best kl {:.3e} (modes {:05}) (itr {:06}) ".
-                                format(itr,
-                                       data_num_modes, modes[-1], kl[-1],
-                                       modes[modes_argmax], kl[modes_argmax], eval_itrs[modes_argmax],
-                                       kl[kl_argmin], modes[kl_argmin], eval_itrs[kl_argmin]), args)
-
-                plt.clf()
-                plt.plot(eval_itrs, modes)
-                plt.xlabel("Training Iteration")
-                plt.ylabel("Number of Modes Captured")
-                plt.savefig("{}/modes.png".format(args.save_dir))
-
-                is_max = modes[modes_argmax] == modes[-1]
-
-                if is_max:
-                    # save model weights for the best performing model
-                    save_ckpt(itr, overwrite=True, prefix="best")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Energy Based Models")
@@ -901,7 +849,7 @@ if __name__ == "__main__":
     # data
     parser.add_argument("--dataset", type=str, default="circles",
                         choices=list(TOY_DSETS) + list(TAB_DSETS) +
-                                ["mnist", "stackmnist", "stack4mnist", "cifar10", "svhn"])
+                                ["mnist", "stackmnist", "cifar10", "svhn"])
     parser.add_argument("--data_root", type=str, default="../data")
     parser.add_argument("--unit_interval", action="store_true")
     parser.add_argument("--logit", action="store_true")
@@ -1022,14 +970,6 @@ if __name__ == "__main__":
         else:
             args.data_dim = 784 * 3
             args.data_size = (3, 28, 28)
-    elif args.dataset == "stack4mnist":
-        args.num_classes = 10000
-        if args.img_size:
-            args.data_dim = 4 * args.img_size ** 2
-            args.data_size = (4, args.img_size, args.img_size)
-        else:
-            args.data_dim = 784 * 4
-            args.data_size = (4, 28, 28)
     elif args.dataset == "svhn" or args.dataset == "cifar10":
         args.num_classes = 10
         args.data_dim = 32 * 32 * 3
