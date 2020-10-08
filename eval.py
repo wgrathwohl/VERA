@@ -94,43 +94,6 @@ def init_random(bs):
     return torch.FloatTensor(bs, 3, 32, 32).uniform_(-1, 1)
 
 
-def sample_p_0(device, replay_buffer, bs, y=None):
-    if len(replay_buffer) == 0:
-        return init_random(bs), []
-    buffer_size = len(replay_buffer) if y is None else len(replay_buffer) // n_classes
-    inds = torch.randint(0, buffer_size, (bs,))
-    # if cond, convert inds to class conditional inds
-    if y is not None:
-        inds = y.cpu() * buffer_size + inds
-        assert not args.uncond, "Can't drawn conditional samples without giving me y"
-    buffer_samples = replay_buffer[inds]
-    random_samples = init_random(bs)
-    choose_random = (torch.rand(bs) < args.reinit_freq).float()[:, None, None, None]
-    samples = choose_random * random_samples + (1 - choose_random) * buffer_samples
-    return samples.to(device), inds
-
-
-def sample_q(args, device, f, replay_buffer, y=None):
-    """this func takes in replay_buffer now so we have the option to sample from
-    scratch (i.e. replay_buffer==[]).  See test_wrn_ebm.py for example.
-    """
-    f.eval()
-    # get batch size
-    bs = args.batch_size if y is None else y.size(0)
-    # generate initial samples and buffer inds of those samples (if buffer is used)
-    init_sample, buffer_inds = sample_p_0(device, replay_buffer, bs=bs, y=y)
-    x_k = torch.autograd.Variable(init_sample, requires_grad=True)
-    # sgld
-    for k in range(args.n_steps):
-        f_prime = torch.autograd.grad(f(x_k, y=y).sum(), [x_k], retain_graph=True)[0]
-        x_k.data += args.sgld_lr * f_prime + args.sgld_std * torch.randn_like(x_k)
-    f.train()
-    final_samples = x_k.detach()
-    # update replay buffer
-    if len(replay_buffer) > 0:
-        replay_buffer[buffer_inds] = final_samples.cpu()
-    return final_samples
-
 def refine_MALA(logp_net, g, x_g, sgld_lr_z):
     # latent space sgld
     eps_sgld = torch.randn_like(x_g)
@@ -509,14 +472,11 @@ if __name__ == "__main__":
     parser.add_argument("--width", type=int, default=10)
     parser.add_argument("--depth", type=int, default=28)
     parser.add_argument("--uncond", action="store_true")
-    parser.add_argument("--buffer_size", type=int, default=0)
-    parser.add_argument("--reinit_freq", type=float, default=.05)
     parser.add_argument("--sgld_lr", type=float, default=1.0)
     parser.add_argument("--sgld_std", type=float, default=1e-2)
     parser.add_argument("--mcmc_lr", type=float, default=.02)
     # logging + evaluation
     parser.add_argument("--save_dir", type=str, default='YOUR_SAVE_PATH_BUDDDDDDYYYYYYY')
-    parser.add_argument("--print_every", type=int, default=100)
     parser.add_argument("--n_sample_steps", type=int, default=100)
     parser.add_argument("--n_sample_batches", type=int, default=100)
     parser.add_argument("--load_path", type=str, default=None)
