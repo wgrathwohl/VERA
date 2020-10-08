@@ -52,4 +52,23 @@ Download `UCI HAR Dataset.zip` from [here](https://archive.ics.uci.edu/ml/datase
 
 Download `data.zip` from [here](https://archive.ics.uci.edu/ml/datasets/Crop+mapping+using+fused+optical-radar+data+set). Unzip. Place the resulting file in `datasets/CROP/`.
 
+### Summary of necessary files
+If you want to use all three datasets, the `datasets/` folder should include these files:
+
+```
+datasets/
+|-- HEPMASS
+|   |-- 1000_train.csv
+|   |-- 1000_test.csv
+|-- HUMAN
+|   |-- train
+|       |-- X_train.txt
+|       |-- y_train.txt
+|   |-- test
+|       |-- X_test.txt
+|       |-- y_test.txt
+|-- CROP
+|   |-- WinnipegDataset.txt
+```
+
 ## BibTeX
