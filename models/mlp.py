@@ -147,9 +147,7 @@ class MOG(nn.Module):
         inds = pi.sample((n,))
         eps = torch.randn((n, self.n_comps, self.data_dim)).to(self.mu.device)
         x_all = eps * self.logstd.exp()[None] + self.mu[None]
-        #print(inds.size(), x_all.size())
         x = (x_all * inds[:, :, None]).sum(1)
-        #print(x.size())
         return x
 
 

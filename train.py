@@ -840,6 +840,7 @@ def main(args):
 
                 logp_net.train()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Energy Based Models")
 
@@ -868,7 +869,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=200)
     parser.add_argument("--n_epochs", type=int, default=200)
     parser.add_argument("--sgld_steps", type=int, default=100)
-    parser.add_argument('--mog_comps', type=int, default=None)
+    parser.add_argument('--mog_comps', type=int, default=None, help="Mixture of gaussians.")
     parser.add_argument("--g_feats", type=int, default=128)
     parser.add_argument("--e_iters", type=int, default=1)
     parser.add_argument("--g_iters", type=int, default=1)
