@@ -895,8 +895,8 @@ if __name__ == "__main__":
     parser.add_argument("--generator_type", type=str, default="vera", choices=["verahmc", "vera"])
     parser.add_argument("--clf_only", action="store_true", help="Only do classification")
     parser.add_argument("--jem", action="store_true", default=False, help="Classification and JEM training")
-    parser.add_argument("--maximum_likelihood", action="store_true", default=False, help="Classification and JEM training")
-    parser.add_argument("--ssm", action="store_true", default=False, help="Classification and JEM training")
+    parser.add_argument("--maximum_likelihood", action="store_true", default=False, help="ML baseline")
+    parser.add_argument("--ssm", action="store_true", default=False, help="Sliced Score Matching baseline")
 
     # VAT baseline
     parser.add_argument("--vat", action="store_true", default=False, help="Run VAT instead of JEM")
