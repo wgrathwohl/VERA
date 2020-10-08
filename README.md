@@ -15,6 +15,7 @@ Code for the paper:
 ```
 pytorch==1.5.1
 torchvision==0.6.1
+numpy
 scikit-learn
 matplotlib
 seaborn
