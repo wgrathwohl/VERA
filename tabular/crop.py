@@ -1,5 +1,5 @@
 """
-Data processing for HEPMASS.
+Data processing for CROP.
 """
 
 import os
