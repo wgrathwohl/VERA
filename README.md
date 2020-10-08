@@ -30,6 +30,10 @@ tqdm
 
 ## Usage
 
+### Hyperparameters
+
+A brief explanation of hyperparameters that can be set from flags and their names in the paper.
+
 ### Training
 
 ### Evaluation
