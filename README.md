@@ -13,8 +13,8 @@ Code for the paper:
 ## Requirements
 
 ```
-pytorch
-torchvision
+pytorch==1.5.1
+torchvision==0.6.1
 scikit-learn
 matplotlib
 seaborn
