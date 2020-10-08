@@ -33,10 +33,10 @@ tqdm
 ### Hyperparameters
 
 A brief explanation of hyperparameters that can be set from flags and their names in the paper. 
-- `--clf_weight` Classification weight (`\alpha` in the paper)
-- `--pg_control` Gradient norm penalty (`\gamma` in the paper)
-- `--ent_weight` Entropy regularization weight (`\lambda` in the paper)
-- `--clf_ent_weight` Classification entropy (`\beta` in the paper)
+- `--clf_weight` Classification weight (`\alpha`)
+- `--pg_control` Gradient norm penalty (`\gamma`)
+- `--ent_weight` Entropy regularization weight (`\lambda`)
+- `--clf_ent_weight` Classification entropy (`\beta`)
 
 ### Training
 
