@@ -40,7 +40,7 @@ A brief explanation of hyperparameters that can be set from flags and their name
 
 ### Training
 
-An explanation of flags for different modes of training
+An explanation of flags for different modes of training. Without any of these flags, an unsupervised VERA model will be trained.
 
 - `--clf_only` For training a classifier on its own, i.e. without an EBM as in JEM.
 - `--jem` Do JEM training.
