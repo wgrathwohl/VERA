@@ -36,7 +36,13 @@ tqdm
 
 ### Mode counting
 
-Models can be trained by passing in the `--dataset stackmnist` flag. Code for counting captured modes of a saved model is available in `mode_counting/stackmnist_mode.py`. Code for training the MNIST classifier for counting modes is available in `mode_counting/mnist_classify.py`. Hyperparameters may be found in the paper. In particular note that results were reported on MNIST rescaled to 64x64, which can be specified with `--img_size 64`.
+Models can be trained by passing in the `--dataset stackmnist` flag. 
+
+Code for counting captured modes of a saved model is available in `mode_counting/stackmnist_mode.py`. 
+
+Code for training the MNIST classifier for counting modes is available in `mode_counting/mnist_classify.py`. 
+
+Hyperparameters may be found in the paper. In particular note that results were reported on MNIST rescaled to 64x64, which can be specified with `--img_size 64`.
 
 ## Data
 
