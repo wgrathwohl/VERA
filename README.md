@@ -12,7 +12,7 @@ Code for the paper:
 
 Code for implementing **V**ariational **E**ntropy **R**egularized **A**pproximate maximum likelihood (VERA). Contains scripts for training VERA and using VERA for [JEM](https://github.com/wgrathwohl/JEM) training. Code is also available for training semi-supervised models on tabular data, mode counting experiments, and tractable likelihood models.
 
-Many thanks
+Many thanks to my amazing co-authors: [Jacob Kelly](https://jacobjinkelly.github.io/), [Milad Hashemi](https://research.google/people/MiladHashemi/), [Mohammad Norouzi](https://norouzi.github.io/), [Kevin Swersky](http://www.cs.toronto.edu/~kswersky/), [David Duvenaud](http://www.cs.toronto.edu/~duvenaud/).
 
 ## Requirements
 
