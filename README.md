@@ -132,3 +132,12 @@ Some code from this repository was adapted from the following repositories:
 - [VAT](https://github.com/lyakaap/VAT-pytorch)
 
 ## BibTeX
+
+```markdown
+@article{grathwohl2020nomcmc,
+  title={No MCMC for me: Amortized sampling for fast and stable training of energy-based models},
+  author={Grathowhl, Will and Kelly, Jacob and Hashemi, Milad and Norouzi, Mohammad and Swersky, Kevin and Duvenaud, David},
+  journal={arXiv preprint arXiv:2010.04230},
+  year={2020}
+}
+```
