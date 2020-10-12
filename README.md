@@ -2,7 +2,7 @@
 Code for the paper:
 
 > Will Grathowhl*, Jacob Kelly*, Milad Hashemi, Mohammad Norouzi, Kevin Swersky, David Duvenaud. "No MCMC for me: Amortized sampling for fast and stable training of energy-based models" _arXiv preprint_ (2020).
-> [[arxiv: TODO]](https://arxiv.org/abs/2007.04504) [[bibtex: TODO]](#bibtex)
+> [[arxiv]](https://arxiv.org/abs/2010.04230) [[bibtex]](#bibtex)
 
 \*Equal Contribution
 
