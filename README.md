@@ -46,7 +46,7 @@ An explanation of flags for different modes of training. Without any of these fl
 - `--jem` Do JEM training.
 - `--labels_per_class` If this is greater than zero, use this many labels per class for semi-supervised learning. If zero (default), do full-label training.
 
-To train a CIFAR10/CIFAR100 JEM model as in the paper, run:
+To train a CIFAR10/CIFAR100 JEM model as in the paper (pretrained models available [here](https://github.com/wgrathwohl/VERA/releases/tag/1.0.0)), run:
 
 ```markdown
 python train.py --dataset DATASET  # cifar10 or cifar100
