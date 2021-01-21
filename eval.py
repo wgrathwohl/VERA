@@ -480,7 +480,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_sample_steps", type=int, default=100)
     parser.add_argument("--n_sample_batches", type=int, default=100)
     parser.add_argument("--load_path", type=str, default=None)
-    parser.add_argument("--generator_type", type=str, default="vlvm", choices=["lvm", "vlvm"])
+    parser.add_argument("--generator_type", type=str, default="vera", choices=["verahmc", "vera"])
     parser.add_argument("--noise_dim", type=int, default=128)
     parser.add_argument("--unit_interval", action="store_true")
     parser.add_argument("--data_aug", action="store_true")
