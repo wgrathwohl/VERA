@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 
 import utils.data
 from models.get_models import get_models
-from mode_counting.mnist_classify import Net
+from mode_counting.mnist_classify import Net,Net2
 import utils
 
 
@@ -42,22 +42,23 @@ def main(parse_args):
     """
 
     # load the trained MNIST classifier
-    classifier = Net(parse_args.img_size)
-    classifier.load_state_dict(torch.load("experiments/mnist_cnn_%d.pt" % parse_args.img_size,
+    #classifier = Net(parse_args.img_size)
+    classifier = Net2()
+    classifier.load_state_dict(torch.load("mode_counting/pretrained_classifier.pt",
                                           map_location=torch.device('cpu')))
     classifier.eval()  # evaluation mode, turn off dropout
 
     # paths to the models we'd like to evaluate
-    eval_dirs = []
+    eval_dirs = ['/home/congen/code/VERA/tmp/stackmnist5']
 
-    eval_itrs = []
+    eval_itrs = [20000]
 
     def load_model(directory, itr,  return_p=False):
         """
         Load models given experiment directory and itr.
         """
-        path = os.path.join("experiments", directory, "save_model", "{:06d}.pt".format(itr))
-
+        path = os.path.join( directory, "save_model", "_{:06d}.pt".format(itr))
+        #path='/home/congen/code/VERA/result/model.pt'
         # load arguments
         with open(os.path.join("experiments", directory, "args.txt"), 'r') as f:
             args = argparse.Namespace(**json.load(f))
@@ -160,9 +161,9 @@ def main(parse_args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Counting Modes")
 
-    parser.add_argument("--num_samples", type=int, default=10000, help="Number of samples from model")
-    parser.add_argument("--batch_size", type=int, default=100, help="Batches for evaluating model")
-    parser.add_argument("--img_size", type=int, default=64, help="Size of MNIST image")
+    parser.add_argument("--num_samples", type=int, default=26000, help="Number of samples from model")
+    parser.add_argument("--batch_size", type=int, default=1000, help="Batches for evaluating model")
+    parser.add_argument("--img_size", type=int, default=28, help="Size of MNIST image")
 
     args = parser.parse_args()
 

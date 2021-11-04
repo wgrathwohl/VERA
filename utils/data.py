@@ -57,13 +57,13 @@ def get_data(args):
             pre_trans = [transforms.ToTensor()]
             post_trans += [lambda x: x.view(-1)]
 
-        tr_dataset = datasets.MNIST("./data",
+        tr_dataset = datasets.MNIST("/home/congen/code/geoml_gan/data",
                                     transform=transforms.Compose(pre_trans +
                                                                  post_trans),
-                                    download=True)
-        te_dataset = datasets.MNIST("./data", train=False,
+                                    download=False)
+        te_dataset = datasets.MNIST("/home/congen/code/geoml_gan/data", train=False,
                                     transform=transforms.Compose(pre_trans + post_trans),
-                                    download=True)
+                                    download=False)
 
 
         tr_dload = DataLoader(tr_dataset, args.batch_size, True, drop_last=True)
@@ -79,11 +79,12 @@ def get_data(args):
             pre_trans = [transforms.Resize(args.img_size), transforms.ToTensor()]
         else:
             pre_trans = [transforms.ToTensor()]
-            post_trans += [lambda x: x.view(-1)]
-        tr_dataset = datasets.MNIST("./data",
+            #post_trans += [lambda x: x.view(-1)]
+            post_trans += [lambda x: x.view((1,28, 28))]
+        tr_dataset = datasets.MNIST("/home/congen/code/geoml_gan/data",
                                     transform=transforms.Compose(pre_trans +
                                                                  post_trans),
-                                    download=True)
+                                    download=False)
 
         def dataset_to_tensor(dataset):
             """
@@ -100,6 +101,7 @@ def get_data(args):
             np.random.seed(args.seed)  # seed so we always train on the same stackmnist
             ids = np.random.randint(0, x.shape[0], size=(x.shape[0], 3))
             X_training = torch.zeros(x.shape[0], 3, x.shape[2], x.shape[3])
+            #X_training = torch.zeros(x.shape[0], 3, x.shape[2])
             Y_training = torch.zeros(x.shape[0])
             for i in range(ids.shape[0]):
                 cnt = 0
@@ -156,15 +158,15 @@ def get_data(args):
             print("using data augmentation")
         else:
             augs = []
-        tr_dataset = datasets.CIFAR10("./data",
+        tr_dataset = datasets.CIFAR10("/home/congen/code/AGE/data/raw/cifar10",
                                       transform=transforms.Compose(augs +
                                                                    [transforms.ToTensor()] +
                                                                    post_trans),
-                                      download=True)
-        te_dataset = datasets.CIFAR10("./data", train=False,
+                                      download=False)
+        te_dataset = datasets.CIFAR10("/home/congen/code/AGE/data/raw/cifar10", train=False,
                                       transform=transforms.Compose([transforms.ToTensor()] +
                                                                    post_trans),
-                                      download=True)
+                                      download=False)
         tr_dload = DataLoader(tr_dataset, args.batch_size, True, drop_last=True)
         te_dload = DataLoader(te_dataset, args.batch_size, False)
         sqrt = lambda x: int(torch.sqrt(torch.Tensor([x])))

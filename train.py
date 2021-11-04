@@ -7,7 +7,7 @@ import json
 import os
 import time
 from operator import itemgetter
-
+import torchvision.utils as vutils
 import matplotlib
 
 matplotlib.use("Agg")
@@ -182,6 +182,10 @@ def main(args):
     for epoch in range(start_epoch, args.n_epochs):
 
         for x_d, y_d in train_loader:
+            #grid = vutils.make_grid(x_d.data.view(args.batch_size, 3, 28, 28), scale_each=True, range=(-1, 1),
+                                    #normalize=True)
+            #vutils.save_image(grid,
+                              #data_sgld_dir + '/' + 'data.png')
             if args.dataset in TOY_DSETS:
                 x_d = utils.toy_data.inf_train_gen(args.dataset, batch_size=args.batch_size)
                 x_d = torch.from_numpy(x_d).float().to(device)
@@ -335,7 +339,7 @@ def main(args):
                 e_lr_scheduler.step()
                 g_lr_scheduler.step()
 
-                itr += 1
+                #itr += 1
 
                 if itr % args.print_every == 0:
 
@@ -504,12 +508,13 @@ def main(args):
                     elif args.jem:
                         ld, ld_logits = logp_net(x_d, return_logits=True)
                     else:
+                        logp_net.cuda()
                         ld, ld_logits = logp_net(x_d).squeeze(), torch.tensor(0.).to(device)
 
                     grad_ld = torch.autograd.grad(ld.sum(), x_d,
                                                   create_graph=True)[0].flatten(start_dim=1).norm(2, 1)
 
-                    logp_obj = (ld - lg_detach).mean()
+                    logp_obj = (ld.to(device) - lg_detach.to(device)).mean()
                     e_loss = -logp_obj + \
                              (ld ** 2).mean() * args.p_control + \
                              (lg_detach ** 2).mean() * args.n_control + \
@@ -517,7 +522,7 @@ def main(args):
                              unsup_ent.mean() * args.clf_ent_weight
 
                     if args.clf:
-                        c_loss = torch.nn.CrossEntropyLoss()(ld_logits, y_l)
+                        c_loss = torch.nn.CrossEntropyLoss()(ld_logits.cuda(), y_l.cuda())
 
                         chosen = ld_logits.max(1).indices
                         train_acc = (chosen == y_l).float().mean().item()
@@ -530,9 +535,9 @@ def main(args):
                             targets = torch.zeros((y_l.size(0), args.num_classes)).to(device)
                             targets.scatter_(1, y_l[:, None], 1)
                             brier = brier_score_loss_multi(y_true=targets, y_prob=class_probs).cpu()
-
                     e_optimizer.zero_grad()
-                    (e_loss + args.clf_weight * c_loss).backward()
+                    #(e_loss + args.clf_weight * c_loss).backward()
+                    e_loss.backward()
                     e_optimizer.step()
 
                 # gen obj
@@ -640,86 +645,86 @@ def main(args):
                                  x_mog.view(x_mog.size(0), *args.data_size))
 
                         # input space sgld
-                        x_sgld = x_g
-                        steps = [x_sgld.detach()]
-                        accepts = []
-                        for k in range(args.sgld_steps):
-                            [x_sgld], a = utils.hmc.MALA([x_sgld], lambda x: logp_net(x).squeeze(), sgld_lr)
-                            steps.append(x_sgld.detach())
-                            accepts.append(a.item())
-                        ar = np.mean(accepts)
-                        utils.print_log("data accept rate: {}".format(ar), args)
-                        sgld_lr = sgld_lr + args.mcmc_lr * (ar - .57) * sgld_lr
-                        plot(("{}/{:0%d}_ref.png" % niters_digs).format(data_sgld_dir, itr),
-                             x_sgld.view(x_g.size(0), *args.data_size))
-
-                        chain = torch.cat([step[0][None] for step in steps], 0)
-                        plot(("{}/{:0%d}.png" % niters_digs).format(data_sgld_chain_dir, itr),
-                             chain.view(chain.size(0), *args.data_size))
-
-                        # latent space sgld
-                        eps_sgld = torch.randn_like(x_g)
-                        z_sgld = torch.randn((eps_sgld.size(0), args.noise_dim)).to(eps_sgld.device)
-                        vs = (z_sgld.requires_grad_(), eps_sgld.requires_grad_())
-                        steps = [vs]
-                        accepts = []
-                        gfn = lambda z, e: g.g(z) + g.logsigma.exp() * e
-                        efn = lambda z, e: logp_net(gfn(z, e)).squeeze()
-                        with torch.no_grad():
-                            x_sgld = gfn(z_sgld, eps_sgld)
-                        plot(("{}/{:0%d}_init.png" % niters_digs).format(gen_sgld_dir, itr),
-                             x_sgld.view(x_g.size(0), *args.data_size))
-                        for k in range(args.sgld_steps):
-                            vs, a = utils.hmc.MALA(vs, efn, sgld_lr_z)
-                            steps.append(vs)
-                            accepts.append(a.item())
-                        ar = np.mean(accepts)
-                        utils.print_log("latent eps accept rate: {}".format(ar), args)
-                        sgld_lr_z = sgld_lr_z + args.mcmc_lr * (ar - .57) * sgld_lr_z
-                        z_sgld, eps_sgld = steps[-1]
-                        with torch.no_grad():
-                            x_sgld = gfn(z_sgld, eps_sgld)
-                        plot(("{}/{:0%d}_ref.png" % niters_digs).format(gen_sgld_dir, itr),
-                             x_sgld.view(x_g.size(0), *args.data_size))
-
-                        z_steps, eps_steps = zip(*steps)
-                        z_chain = torch.cat([step[0][None] for step in z_steps], 0)
-                        eps_chain = torch.cat([step[0][None] for step in eps_steps], 0)
-                        with torch.no_grad():
-                            chain = gfn(z_chain, eps_chain)
-                        plot(("{}/{:0%d}.png" % niters_digs).format(gen_sgld_chain_dir, itr),
-                             chain.view(chain.size(0), *args.data_size))
-
-                        # latent space sgld no eps
-                        z_sgld = torch.randn((eps_sgld.size(0), args.noise_dim)).to(eps_sgld.device)
-                        vs = (z_sgld.requires_grad_(),)
-                        steps = [vs]
-                        accepts = []
-                        gfn = lambda z: g.g(z)
-                        efn = lambda z: logp_net(gfn(z)).squeeze()
-                        with torch.no_grad():
-                            x_sgld = gfn(z_sgld)
-                        plot(("{}/{:0%d}_init.png" % niters_digs).format(z_sgld_dir, itr),
-                             x_sgld.view(x_g.size(0), *args.data_size))
-                        for k in range(args.sgld_steps):
-                            vs, a = utils.hmc.MALA(vs, efn, sgld_lr_zne)
-                            steps.append(vs)
-                            accepts.append(a.item())
-                        ar = np.mean(accepts)
-                        utils.print_log("latent accept rate: {}".format(ar), args)
-                        sgld_lr_zne = sgld_lr_zne + args.mcmc_lr * (ar - .57) * sgld_lr_zne
-                        z_sgld, = steps[-1]
-                        with torch.no_grad():
-                            x_sgld = gfn(z_sgld)
-                        plot(("{}/{:0%d}_ref.png" % niters_digs).format(z_sgld_dir, itr),
-                             x_sgld.view(x_g.size(0), *args.data_size))
-
-                        z_steps = [s[0] for s in steps]
-                        z_chain = torch.cat([step[0][None] for step in z_steps], 0)
-                        with torch.no_grad():
-                            chain = gfn(z_chain)
-                        plot(("{}/{:0%d}.png" % niters_digs).format(z_sgld_chain_dir, itr),
-                             chain.view(chain.size(0), *args.data_size))
+                        # x_sgld = x_g
+                        # steps = [x_sgld.detach()]
+                        # accepts = []
+                        # for k in range(args.sgld_steps):
+                        #     [x_sgld], a = utils.hmc.MALA([x_sgld], lambda x: logp_net(x).squeeze(), sgld_lr)
+                        #     steps.append(x_sgld.detach())
+                        #     accepts.append(a.item())
+                        # ar = np.mean(accepts)
+                        # utils.print_log("data accept rate: {}".format(ar), args)
+                        # sgld_lr = sgld_lr + args.mcmc_lr * (ar - .57) * sgld_lr
+                        # plot(("{}/{:0%d}_ref.png" % niters_digs).format(data_sgld_dir, itr),
+                        #      x_sgld.view(x_g.size(0), *args.data_size))
+                        #
+                        # chain = torch.cat([step[0][None] for step in steps], 0)
+                        # plot(("{}/{:0%d}.png" % niters_digs).format(data_sgld_chain_dir, itr),
+                        #      chain.view(chain.size(0), *args.data_size))
+                        #
+                        # # latent space sgld
+                        # eps_sgld = torch.randn_like(x_g)
+                        # z_sgld = torch.randn((eps_sgld.size(0), args.noise_dim)).to(eps_sgld.device)
+                        # vs = (z_sgld.requires_grad_(), eps_sgld.requires_grad_())
+                        # steps = [vs]
+                        # accepts = []
+                        # gfn = lambda z, e: g.g(z) + g.logsigma.exp() * e
+                        # efn = lambda z, e: logp_net(gfn(z, e)).squeeze()
+                        # with torch.no_grad():
+                        #     x_sgld = gfn(z_sgld, eps_sgld)
+                        # plot(("{}/{:0%d}_init.png" % niters_digs).format(gen_sgld_dir, itr),
+                        #      x_sgld.view(x_g.size(0), *args.data_size))
+                        # for k in range(args.sgld_steps):
+                        #     vs, a = utils.hmc.MALA(vs, efn, sgld_lr_z)
+                        #     steps.append(vs)
+                        #     accepts.append(a.item())
+                        # ar = np.mean(accepts)
+                        # utils.print_log("latent eps accept rate: {}".format(ar), args)
+                        # sgld_lr_z = sgld_lr_z + args.mcmc_lr * (ar - .57) * sgld_lr_z
+                        # z_sgld, eps_sgld = steps[-1]
+                        # with torch.no_grad():
+                        #     x_sgld = gfn(z_sgld, eps_sgld)
+                        # plot(("{}/{:0%d}_ref.png" % niters_digs).format(gen_sgld_dir, itr),
+                        #      x_sgld.view(x_g.size(0), *args.data_size))
+                        #
+                        # z_steps, eps_steps = zip(*steps)
+                        # z_chain = torch.cat([step[0][None] for step in z_steps], 0)
+                        # eps_chain = torch.cat([step[0][None] for step in eps_steps], 0)
+                        # with torch.no_grad():
+                        #     chain = gfn(z_chain, eps_chain)
+                        # plot(("{}/{:0%d}.png" % niters_digs).format(gen_sgld_chain_dir, itr),
+                        #      chain.view(chain.size(0), *args.data_size))
+                        #
+                        # # latent space sgld no eps
+                        # z_sgld = torch.randn((eps_sgld.size(0), args.noise_dim)).to(eps_sgld.device)
+                        # vs = (z_sgld.requires_grad_(),)
+                        # steps = [vs]
+                        # accepts = []
+                        # gfn = lambda z: g.g(z)
+                        # efn = lambda z: logp_net(gfn(z)).squeeze()
+                        # with torch.no_grad():
+                        #     x_sgld = gfn(z_sgld)
+                        # plot(("{}/{:0%d}_init.png" % niters_digs).format(z_sgld_dir, itr),
+                        #      x_sgld.view(x_g.size(0), *args.data_size))
+                        # for k in range(args.sgld_steps):
+                        #     vs, a = utils.hmc.MALA(vs, efn, sgld_lr_zne)
+                        #     steps.append(vs)
+                        #     accepts.append(a.item())
+                        # ar = np.mean(accepts)
+                        # utils.print_log("latent accept rate: {}".format(ar), args)
+                        # sgld_lr_zne = sgld_lr_zne + args.mcmc_lr * (ar - .57) * sgld_lr_zne
+                        # z_sgld, = steps[-1]
+                        # with torch.no_grad():
+                        #     x_sgld = gfn(z_sgld)
+                        # plot(("{}/{:0%d}_ref.png" % niters_digs).format(z_sgld_dir, itr),
+                        #      x_sgld.view(x_g.size(0), *args.data_size))
+                        #
+                        # z_steps = [s[0] for s in steps]
+                        # z_chain = torch.cat([step[0][None] for step in z_steps], 0)
+                        # with torch.no_grad():
+                        #     chain = gfn(z_chain)
+                        # plot(("{}/{:0%d}.png" % niters_digs).format(z_sgld_chain_dir, itr),
+                        #      chain.view(chain.size(0), *args.data_size))
 
             if itr % args.save_every == 0:
                 save_ckpt(itr, overwrite=False)
@@ -842,16 +847,28 @@ def main(args):
 
 
 if __name__ == "__main__":
+    """
+        Usage:
+
+            export CUDA_VISIBLE_DEVICES=3
+            export PORT=6007 
+            python train.py --ckpt_path ./result/model.pt 
+
+
+        :return:
+        """
+    if 'CUDA_VISIBLE_DEVICES' not in os.environ:
+      os.environ['CUDA_VISIBLE_DEVICES'] = '3'
     parser = argparse.ArgumentParser("Energy Based Models")
 
     # logging
     parser.add_argument("--log_file", type=str, default="log.txt")
 
     # data
-    parser.add_argument("--dataset", type=str, default="circles",
+    parser.add_argument("--dataset", type=str, default="swissroll",
                         choices=list(TOY_DSETS) + list(TAB_DSETS) +
                                 ["mnist", "stackmnist", "cifar10", "svhn"])
-    parser.add_argument("--data_root", type=str, default="../data")
+    parser.add_argument("--data_root", type=str, default="./data")
     parser.add_argument("--unit_interval", action="store_true")
     parser.add_argument("--logit", action="store_true")
     parser.add_argument("--nice", action="store_true")
@@ -859,15 +876,15 @@ if __name__ == "__main__":
     parser.add_argument('--img_size', type=int)
 
     # optimization
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--glr", type=float, default=1e-3)
+    parser.add_argument("--lr", type=float, default=.001)
+    parser.add_argument("--glr", type=float, default=.001)
     parser.add_argument("--beta1", type=float, default=0.)
     parser.add_argument("--beta2", type=float, default=.9)
     parser.add_argument("--labels_per_class", type=int, default=0,
                         help="number of labeled examples per class, if zero then use all labels (no SSL)")
     parser.add_argument("--optimizer", choices=["adam", "sgd"], default="adam")
     parser.add_argument("--batch_size", type=int, default=200)
-    parser.add_argument("--n_epochs", type=int, default=200)
+    parser.add_argument("--n_epochs", type=int, default=150000)
     parser.add_argument("--sgld_steps", type=int, default=100)
     parser.add_argument('--mog_comps', type=int, default=None, help="Mixture of gaussians.")
     parser.add_argument("--g_feats", type=int, default=128)
@@ -875,7 +892,7 @@ if __name__ == "__main__":
     parser.add_argument("--g_iters", type=int, default=1)
     parser.add_argument("--decay_epochs", nargs="+", type=float, default=[160, 180],
                         help="decay learning rate by decay_rate at these epochs")
-    parser.add_argument("--decay_rate", type=float, default=.3,
+    parser.add_argument("--decay_rate", type=float, default=0.3,
                         help="learning rate decay multiplier")
     parser.add_argument("--warmup_iters", type=float, default=0,
                         help="number of iterations to warmup the LR")
@@ -913,8 +930,8 @@ if __name__ == "__main__":
     parser.add_argument("--reinit_freq", type=float, default=.05)
 
     # loss weighting
-    parser.add_argument("--ent_weight", type=float, default=1.)
-    parser.add_argument("--clf_weight", type=float, default=1.)
+    parser.add_argument("--ent_weight", type=float, default=1)
+    parser.add_argument("--clf_weight", type=float, default=1)
     parser.add_argument("--clf_ent_weight", type=float, default=0.)
     parser.add_argument("--mcmc_lr", type=float, default=.02)
     parser.add_argument("--post_lr", type=float, default=.02)
@@ -923,16 +940,16 @@ if __name__ == "__main__":
     parser.add_argument("--weight_decay", type=float, default=0.0)
     parser.add_argument("--p_control", type=float, default=0.0)
     parser.add_argument("--n_control", type=float, default=0.0)
-    parser.add_argument("--pg_control", type=float, default=0.0)
+    parser.add_argument("--pg_control", type=float, default=0.1)
 
     # logging + evaluation
-    parser.add_argument("--save_dir", type=str, default='/tmp/pgan_simp')
+    parser.add_argument("--save_dir", type=str, default='./tmp/swissroll')
     parser.add_argument("--ckpt_path", type=str, default=None, required=True)
-    parser.add_argument("--ckpt_every", type=int, default=10, help="Epochs between checkpoint save")
-    parser.add_argument("--save_every", type=int, default=100000, help="Saving models for evaluation")
-    parser.add_argument("--eval_every", type=int, default=200, help="Evaluating models on validation set")
-    parser.add_argument("--print_every", type=int, default=10000, help="Iterations between print")
-    parser.add_argument("--viz_every", type=int, default=10000, help="Iterations between visualization")
+    parser.add_argument("--ckpt_every", type=int, default=5000, help="Epochs between checkpoint save")
+    parser.add_argument("--save_every", type=int, default=5000, help="Saving models for evaluation")
+    parser.add_argument("--eval_every", type=int, default=5000, help="Evaluating models on validation set")
+    parser.add_argument("--print_every", type=int, default=1000, help="Iterations between print")
+    parser.add_argument("--viz_every", type=int, default=5000, help="Iterations between visualization")
     parser.add_argument("--load_path", type=str, default=None)
 
     args = parser.parse_args()
@@ -1000,7 +1017,7 @@ if __name__ == "__main__":
         return all(x < y for x, y in zip(lst[:-1], lst[1:]))
 
     assert strictly_increasing(args.decay_epochs), "Decay epochs should be strictly increasing"
-
+    args.save_dir = os.path.join(args.save_dir + '/%03d' % int(time.time()))
     utils.makedirs(args.save_dir)
 
     torch.manual_seed(args.seed)
@@ -1011,5 +1028,6 @@ if __name__ == "__main__":
 
     with open("{}/args.txt".format(args.save_dir), 'w') as f:
         json.dump(args.__dict__, f, indent=4, sort_keys=True)
+
 
     main(args)

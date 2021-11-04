@@ -8,7 +8,7 @@ import sklearn.datasets
 from sklearn.utils import shuffle as util_shuffle
 import torch
 
-TOY_DSETS = ("moons", "circles", "8gaussians", "pinwheel", "2spirals", "checkerboard", "rings", "swissroll")
+TOY_DSETS = ("moons", "circles", "8gaussians","25gaussians", "pinwheel", "2spirals", "checkerboard", "rings", "swissroll")
 
 
 def data_density(data):
@@ -96,7 +96,7 @@ def inf_train_gen(data, rng=None, batch_size=200):
     elif data == "moons":
         data = sklearn.datasets.make_moons(n_samples=batch_size, noise=0.1)[0]
         data = data.astype("float32")
-        data = data * 2 + np.array([-1, -0.2])
+        #data = data * 2 + np.array([-1, -0.2])
         return data
 
     elif data == "8gaussians":
@@ -117,7 +117,19 @@ def inf_train_gen(data, rng=None, batch_size=200):
         dataset = np.array(dataset, dtype="float32")
         dataset /= 1.414
         return dataset
-
+    elif data == '25gaussians':
+        data = []
+        for j in range(1000 // 25):
+            for x in range(-2, 3):
+                for y in range(-2, 3):
+                    point = np.random.randn(2) * 0.05
+                    point[0] += 2 * x
+                    point[1] += 2 * y
+                    data.append(point)
+        data = np.array(data[:batch_size], dtype='float32')
+        np.random.shuffle(data)
+        data /= 2.828
+        return data
     elif data == "pinwheel":
         radial_std = 0.3
         tangential_std = 0.1
