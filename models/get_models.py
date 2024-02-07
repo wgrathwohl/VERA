@@ -5,12 +5,10 @@ Get models based on configuration.
 import utils
 
 from models import wideresnet
-from models.dcgan import DCGANDiscriminator, BNDCGANDiscriminator, DCGANGenerator,\
-    EnergyModel,Generator,EnergyModel_mnist, Generator_mnist
+from models.dcgan import DCGANDiscriminator, BNDCGANDiscriminator, DCGANGenerator
 from models.generator import VERAHMCGenerator, VERAGenerator
 from models.jem import JEM
-from models.mlp import small_mlp_ebm, small_mlp_ebm_sn,large_mlp_ebm, small_mlp_generator, \
-    large_mlp_generator, MOG, NICE,small_mlp_generator_no_bn
+from models.mlp import small_mlp_ebm, large_mlp_ebm, small_mlp_generator, large_mlp_generator, MOG, NICE,large_mlp_generator_large
 from models.resnet import ResNetDiscriminator, ResNetGenerator
 
 from utils.toy_data import TOY_DSETS
@@ -48,8 +46,7 @@ def get_models(args, log=True):
             elif args.mog_comps is not None:
                 logp_net = MOG(args.data_dim, args.mog_comps)
             else:
-                #logp_net = large_mlp_ebm(args.data_dim, nout=nout)
-                logp_net =EnergyModel_mnist(3)
+                logp_net = large_mlp_ebm(args.data_dim, nout=nout)
     elif args.dataset == "svhn" or args.dataset == "cifar10" or args.dataset == "cifar100":
         if args.dataset == "cifar100":
             nout = 100 if args.clf else 1
@@ -74,8 +71,7 @@ def get_models(args, log=True):
             if args.norm == "batch":
                 logp_net = BNDCGANDiscriminator(nout=nout)
             else:
-                #logp_net = DCGANDiscriminator(nout=nout)
-                logp_net=EnergyModel()
+                logp_net = DCGANDiscriminator(nout=nout)
     else:
         raise ValueError
 
@@ -101,8 +97,7 @@ def get_models(args, log=True):
                 else:
                     raise ValueError
             else:
-                #generator_net = large_mlp_generator(args.noise_dim, args.data_dim, args.unit_interval, args.nice)
-                generator_net = Generator_mnist(3)
+                generator_net = large_mlp_generator(args.noise_dim, args.data_dim, args.unit_interval, args.nice)
         elif args.dataset in ["svhn", "cifar10", "cifar100"]:
             if args.resnet:
                 assert args.noise_dim == 128
@@ -114,8 +109,7 @@ def get_models(args, log=True):
                 assert args.noise_dim == 128
                 generator_net = ResNetGenerator(args.unit_interval, feats=args.g_feats)
             else:
-                #generator_net = DCGANGenerator(args.noise_dim, args.unit_interval)
-                generator_net = Generator(args.noise_dim)
+                generator_net = DCGANGenerator(args.noise_dim, args.unit_interval)
         else:
             raise ValueError
 
