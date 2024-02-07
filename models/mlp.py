@@ -20,19 +20,7 @@ def small_mlp_ebm(data_dim, h_dim, nout=1):
         nn.PReLU(),
         nn.Linear(h_dim, nout, bias=True)
     )
-def small_mlp_ebm_sn(data_dim, h_dim, nout=1):
-    """
-    Small MLP EBM.
-    """
-    return nn.Sequential(
-        nn.utils.spectral_norm(nn.Linear(data_dim, h_dim)),
-        #nn.LeakyReLU(.2, inplace=True),
-        nn.PReLU(),
-        nn.utils.spectral_norm(nn.Linear(h_dim, h_dim)),
-        #nn.LeakyReLU(.2, inplace=True),
-        nn.PReLU(),
-        nn.utils.spectral_norm(nn.Linear(h_dim, nout, bias=True))
-    )
+
 
 def linear_generator(noise_dim, data_dim):
     """
@@ -46,14 +34,16 @@ def small_mlp_generator(noise_dim, data_dim, h_dim):
     Small MLP generator.
     """
     return nn.Sequential(
+        #nn.Linear(noise_dim, h_dim, bias=False),
         nn.Linear(noise_dim, h_dim, bias=True),
-        nn.PReLU(),
         nn.BatchNorm1d(h_dim, affine=True),
         #nn.ReLU(inplace=True),
+        nn.PReLU(),
+        #nn.Linear(h_dim, h_dim, bias=False),
         nn.Linear(h_dim, h_dim, bias=True),
-        nn.PReLU(),
         nn.BatchNorm1d(h_dim, affine=True),
         #nn.ReLU(inplace=True),
+        nn.PReLU(),
         nn.Linear(h_dim, data_dim, bias=True)
     )
 
@@ -134,7 +124,37 @@ def large_mlp_generator(noise_dim, data_dim, unit_interval, no_final_act=False):
         nn.Linear(500, data_dim, bias=True),
         final_act
     )
-
+def large_mlp_generator_large(noise_dim, data_dim, unit_interval, no_final_act=False):
+    """
+    Large MLP generator.
+    """
+    if no_final_act:
+        final_act = nn.Identity()
+    else:
+        if unit_interval:
+            final_act = nn.Sigmoid()
+        else:
+            final_act = nn.Tanh()
+    return nn.Sequential(
+        nn.Linear(noise_dim, 1600, bias=True),
+        nn.BatchNorm1d(1600, affine=True),
+        # nn.Softplus(),
+        nn.PReLU(),
+        nn.Linear(1600, 1600, bias=True),
+        nn.BatchNorm1d(1600, affine=True),
+        # nn.Softplus(),
+        nn.PReLU(),
+        nn.Linear(1600, 3200, bias=True),
+        nn.BatchNorm1d(3200, affine=True),
+        # nn.Softplus(),
+        nn.PReLU(),
+        nn.Linear(3200, 1600, bias=True),
+        nn.BatchNorm1d(1600, affine=True),
+        # nn.Softplus(),
+        nn.PReLU(),
+        nn.Linear(1600, data_dim, bias=True),
+        final_act
+    )
 
 class MOG(nn.Module):
     def __init__(self, data_dim, n_comps):
